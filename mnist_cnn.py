@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
 import torchvision
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader
@@ -31,7 +30,7 @@ class Net(nn.Module):
         x = x.view(-1, 4 * 4 * 50)
         x = F.relu(self.fc1(x))
         x = self.fc2(x)
-        # return F.log_softmax(x, dim=1)
+        # return F.log_softmax(x, dim=1) 此处若使用log_softmax 后边损失函数要用nll_loss
         return x
 
 
@@ -71,8 +70,14 @@ def test(model, device, test_dataloader):
 
 if __name__ == '__main__':
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--batch_size', dest='batch_size', type=int, default=32, help='batch size')
+    parser.add_argument('--epoch', dest='num_epoch', type=int, default=2, help='epoch')
+    parser.add_argument('--lr', dest='lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--momentum', dest='momentum', type=float, default=0.5, help='momentum')
+    args = parser.parse_args()
+    
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    batch_size = 32
     train_set = datasets.MNIST("./mnist_data", train=True, download=True,
                                transform=transforms.Compose([transforms.ToTensor(),
                                                              transforms.Normalize((0.1307,), (0.3081,))]))
@@ -80,21 +85,19 @@ if __name__ == '__main__':
                               transform=transforms.Compose([transforms.ToTensor(),
                                                             transforms.Normalize((0.1307,), (0.3081,))]))
     train_dataloader = torch.utils.data.DataLoader(train_set,
-                                                   batch_size=batch_size,
+                                                   batch_size=args.batch_size,
                                                    shuffle=True,
                                                    num_workers=1,
                                                    pin_memory=True)
     test_dataloader = torch.utils.data.DataLoader(test_set,
-                                                  batch_size=batch_size,
+                                                  batch_size=args.batch_size,
                                                   shuffle=True,
                                                   num_workers=1,
                                                   pin_memory=True)
-    lr = 0.01
-    momentum = 0.5
     model = Net().to(device)
-    optimizer = torch.optim.SGD(model.parameters(), lr=lr, momentum=momentum)
-    num_epochs = 2
-    for epoch in range(num_epochs):
+    optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
+
+    for epoch in range(arggs.num_epochs):
         train(model, device, train_dataloader, optimizer, epoch)
         test(model, device, test_dataloader)
     torch.save(model.state_dict(), "mnist_cnn.pt")
